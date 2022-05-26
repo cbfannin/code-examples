@@ -1,0 +1,5 @@
+name: My Points Block
+type: module
+description: Displays logged in user's total points in a block.
+package: WAT
+core_version_requirement: ^9 || ^10

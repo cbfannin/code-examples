@@ -1,0 +1,7 @@
+name: Point Entry Create Node
+type: module
+description: Creates node from Point Entry webform submission.
+package: WAT
+core_version_requirement: ^9 || ^10
+dependencies:
+  - webform

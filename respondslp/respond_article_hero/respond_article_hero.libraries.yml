@@ -1,0 +1,4 @@
+respond_article_hero:
+  css:
+    theme:
+      css/respond_article_hero_theme.css: {}

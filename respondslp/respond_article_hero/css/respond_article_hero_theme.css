@@ -1,0 +1,41 @@
+h1.article-hero-title {
+  /*color: #343a40;*/
+  /*text-shadow: 1px 1px #fff;*/
+}
+
+h1.article-hero-title-highlight {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+
+}
+
+.article-hero-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+}
+
+.article-hero-tag{
+  display: inline-block;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: 0;
+}
+
+.article-hero-tag a {
+  display: block;
+  color: white;
+  background-color: #7F428C;
+  margin: 4px;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.article-hero-tag a:hover {
+  color: #7F428C;
+  background-color: white;
+  text-decoration: none;
+}

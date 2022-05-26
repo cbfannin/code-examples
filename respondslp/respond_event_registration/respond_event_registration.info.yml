@@ -1,0 +1,20 @@
+name: 'Event Registration System'
+type: module
+description: 'Event registration system with email reminders.'
+package: 'RESPOND'
+# core: 8.x
+dependencies:
+  - 'drupal:datetime'
+  - 'token:token'
+  - 'webform:webform'
+  - 'webform:webform_node'
+  - 'webform:webform_scheduled_email'
+  - 'geolocation:geolocation'
+  - 'geolocation:geolocation_google_maps'
+
+# Information added by Drupal.org packaging script on 2019-03-28
+version: '8.x-5.2'
+core: '8.x'
+project: 'webform'
+datestamp: 1553768595
+

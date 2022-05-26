@@ -1,0 +1,4 @@
+my-points-block:
+  css:
+    theme:
+      css/my-points-block-theme.css: {}

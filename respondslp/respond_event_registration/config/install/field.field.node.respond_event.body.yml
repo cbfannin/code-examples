@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.body
+    - node.type.respond_event
+  module:
+    - text
+id: node.respond_event.body
+field_name: body
+entity_type: node
+bundle: respond_event
+label: 'Event Description'
+description: ''
+required: true
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  display_summary: true
+field_type: text_with_summary

@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Contains cs_intranet_feedback.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function cs_intranet_feedback_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the cs_intranet_feedback module.
+    case 'help.page.cs_intranet_feedback':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Allows logged in users to report suggestions and errors.') . '</p>';
+      return $output;
+
+    default:
+  }
+}

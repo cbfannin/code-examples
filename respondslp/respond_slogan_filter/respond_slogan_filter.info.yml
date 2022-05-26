@@ -1,0 +1,5 @@
+name: Site Slogan
+description: Custom filter to replace a [slogan] token with the site's slogan.
+type: module
+package: RESPOND
+core: 8.x

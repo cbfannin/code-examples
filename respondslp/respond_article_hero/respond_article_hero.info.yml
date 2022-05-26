@@ -1,0 +1,7 @@
+name: 'Article Hero'
+type: module
+description: 'Article Hero Title.'
+core: 8.x
+package: 'RESPOND'
+dependencies:
+  - drupal:block

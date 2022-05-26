@@ -1,0 +1,18 @@
+.my-points-block--block {
+  background-color: #ee3825;
+  color: #fff;
+  font-weight: bold;
+  padding: .25em;
+  border-radius: 6px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.my-points-block--block {
+  font-size: 1em;
+  text-transform: uppercase;
+}
+
+.my-points-block--block p{
+  font-size: 1.5em;
+}

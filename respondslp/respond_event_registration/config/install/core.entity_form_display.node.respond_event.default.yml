@@ -1,0 +1,136 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.respond_event.body
+    - field.field.node.respond_event.field_event_cost
+    - field.field.node.respond_event.field_event_date_range
+    - field.field.node.respond_event.field_event_location
+    - field.field.node.respond_event.webform
+    - node.type.respond_event
+  module:
+    - datetime_range
+    - geolocation_google_maps
+    - path
+    - text
+    - webform
+id: node.respond_event.default
+targetEntityType: node
+bundle: respond_event
+mode: default
+content:
+  body:
+    type: text_textarea_with_summary
+    weight: 4
+    settings:
+      rows: 9
+      summary_rows: 3
+      placeholder: ''
+    third_party_settings: {  }
+    region: content
+  created:
+    type: datetime_timestamp
+    weight: 8
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_event_cost:
+    weight: 2
+    settings:
+      placeholder: ''
+    third_party_settings: {  }
+    type: number
+    region: content
+  field_event_date_range:
+    weight: 3
+    settings: {  }
+    third_party_settings: {  }
+    type: daterange_default
+    region: content
+  field_event_location:
+    weight: 5
+    settings:
+      centre:
+        fit_bounds:
+          enable: true
+      auto_client_location: ''
+      auto_client_location_marker: ''
+      allow_override_map_settings: 0
+      google_map_settings:
+        map_features:
+          marker_infowindow:
+            enabled: true
+          control_locate:
+            enabled: true
+          control_zoom:
+            enabled: true
+          control_maptype:
+            enabled: true
+          control_geocoder:
+            enabled: true
+            weight: -100
+          control_recenter:
+            enabled: true
+        type: ROADMAP
+        zoom: 10
+        height: 400px
+        width: 100%
+        minZoom: 0
+        maxZoom: 18
+        rotateControl: false
+        gestureHandling: auto
+    third_party_settings: {  }
+    type: geolocation_googlegeocoder
+    region: content
+  path:
+    type: path
+    weight: 11
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  promote:
+    type: boolean_checkbox
+    settings:
+      display_label: true
+    weight: 9
+    region: content
+    third_party_settings: {  }
+  status:
+    type: boolean_checkbox
+    settings:
+      display_label: true
+    weight: 12
+    region: content
+    third_party_settings: {  }
+  sticky:
+    type: boolean_checkbox
+    settings:
+      display_label: true
+    weight: 10
+    region: content
+    third_party_settings: {  }
+  title:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  uid:
+    type: entity_reference_autocomplete
+    weight: 7
+    settings:
+      match_operator: CONTAINS
+      size: 60
+      placeholder: ''
+    region: content
+    third_party_settings: {  }
+  webform:
+    weight: 6
+    settings:
+      default_data: true
+    third_party_settings: {  }
+    type: webform_entity_reference_select
+    region: content
+hidden: {  }

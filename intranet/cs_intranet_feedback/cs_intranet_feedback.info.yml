@@ -1,0 +1,5 @@
+name: Feedback
+type: module
+description: Allows logged in users to report suggestions and errors.
+core: 8.x
+package: WAT

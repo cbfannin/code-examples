@@ -1,0 +1,33 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.node.teaser
+    - field.field.node.respond_event.body
+    - field.field.node.respond_event.field_event_date_range
+    - field.field.node.respond_event.webform
+    - node.type.respond_event
+  module:
+    - text
+    - user
+id: node.respond_event.teaser
+targetEntityType: node
+bundle: respond_event
+mode: teaser
+content:
+  body:
+    label: hidden
+    type: text_summary_or_trimmed
+    weight: 1
+    settings:
+      trim_length: 600
+    third_party_settings: {  }
+    region: content
+  links:
+    weight: 2
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+hidden:
+  field_event_date_range: true
+  webform: true

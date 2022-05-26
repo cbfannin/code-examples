@@ -1,0 +1,31 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.webform
+    - node.type.respond_event
+    - webform.webform.respond_event_registration
+  module:
+    - webform
+id: node.respond_event.webform
+field_name: webform
+entity_type: node
+bundle: respond_event
+label: Webform
+description: ''
+required: true
+translatable: true
+default_value:
+  -
+    default_data: ''
+    status: open
+    open: ''
+    close: ''
+    target_uuid: 5e93381e-f579-4990-9b08-13ba5388743d
+default_value_callback: ''
+settings:
+  handler: 'default:webform'
+  handler_settings:
+    target_bundles: null
+    auto_create: false
+field_type: webform

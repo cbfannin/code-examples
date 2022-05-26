@@ -1,0 +1,5 @@
+respond_slogan:
+  version: 1.x
+  css:
+    theme:
+      respond_slogan_filter.theme.css: {}

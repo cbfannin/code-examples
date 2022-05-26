@@ -1,0 +1,8 @@
+
+cs_intranet_feedback.feedback_form:
+  path: '/feedback-form'
+  defaults:
+    _form: '\Drupal\cs_intranet_feedback\Form\FeedbackForm'
+    _title: 'Feedback Form'
+  requirements:
+    _role: 'authenticated'
