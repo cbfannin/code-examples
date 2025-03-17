@@ -1,0 +1,13 @@
+entity.goal.collection:
+  title: 'Goals'
+  route_name: entity.goal.collection
+  base_route: system.admin_content
+  weight: 10
+entity.goal_type.edit_form:
+  title: 'Edit'
+  route_name: entity.goal_type.edit_form
+  base_route: entity.goal_type.edit_form
+entity.goal_type.collection:
+  title: 'List'
+  route_name: entity.goal_type.collection
+  base_route: entity.goal_type.collection

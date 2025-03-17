@@ -1,0 +1,7 @@
+name: 'YS Custom Events'
+type: module
+description: 'Custom event subscribers and dispatchers.'
+core_version_requirement: ^9 || ^10
+package: 'Custom'
+dependencies:
+  - scheduler:scheduler

@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * Add 'changed' and 'created' fields if they don't exist.
+ */
+function sg_goal_update_9001(&$sandbox) {
+  $update_manager = \Drupal::entityDefinitionUpdateManager();
+  foreach (['changed', 'created'] as $field) {
+    $field_def = $update_manager->getFieldStorageDefinition($field, 'goal');
+    if ($field_def) {
+      // The field is defined but may not be properly installed
+      $update_manager->installFieldStorageDefinition($field, 'goal', 'goal', $field_def);
+    }
+    else {
+      // If the field doesn't exist, create it
+      $field_def = \Drupal\Core\Field\BaseFieldDefinition::create($field)
+      ->setLabel(t($field))
+      ->setDescription(t("The time this goal was $field."))
+      ->setDisplayOptions('view', [
+        'label' => 'inline',
+        'type' => 'timestamp',
+      ]);
+
+      $update_manager->installFieldStorageDefinition($field, 'goal', 'goal', $field_def);
+    }
+  }
+}

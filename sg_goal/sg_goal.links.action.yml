@@ -1,0 +1,11 @@
+goal.type_add:
+  title: 'Add goal type'
+  route_name: entity.goal_type.add_form
+  appears_on:
+    - entity.goal_type.collection
+
+goal.add_page:
+  title: 'Add goal'
+  route_name: entity.goal.add_page
+  appears_on:
+    - entity.goal.collection

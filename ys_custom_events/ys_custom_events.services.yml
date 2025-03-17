@@ -1,0 +1,4 @@
+services:
+  Drupal\ys_custom_events\EventSubscriber\PublishNodeEventSubscriber:
+    tags:
+      - { name: 'event_subscriber' }

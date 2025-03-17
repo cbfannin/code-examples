@@ -1,0 +1,506 @@
+<?php
+
+use Drupal\Core\Database\Database;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+use Drupal\search_api_solr\Entity\Index;
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function sg_goal_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'node_nonprofit_edit_form' || $form_id == 'node_group_hub_edit_form') {
+      $nid = $form_state->getformObject()->getEntity()->id();
+      // Add donation goals button.
+      $form['group_goals']['button_donations'] = array(
+        '#markup' => t(' <div id="donations-btn" class="button button--primary btn btn-secondary border-2 px-3 ">
+      <a href="@donations">Donation goals</a></div>',
+          array('@donations' => "/node/$nid/donation-goals"))
+      );
+      // Add volunteer goals button.
+      $form['group_goals']['button_volunteers'] = array(
+        '#markup' => t(' <div id="volunteers-btn" class="button button--primary btn btn-secondary border-2 px-3 ">
+      <a href="@volunteers">Volunteer goals</a></div>',
+          array('@volunteers' => "/node/$nid/volunteer-goals"))
+      );
+    }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function sg_goal_form_goal_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $entity = $form_state->getformObject()->getEntity();
+
+  $query = \Drupal::request()->query->all();
+  $related_organization_id = (!empty($query['edit']) && $query['edit']['related_organizations']['widget'][0]['target_id']) || !empty($entity->get('related_organizations')->target_id) ?? NULL;
+  $form['related_organizations']['#disabled'] = TRUE;
+
+  if (!$related_organization_id) {
+    $form['#prefix'] = '<h3 class="text-center">You must create goals within an organization profile.</h3>
+    <h3 class="text-center">Edit the organization profile and click its Goals tab.</h3>';
+    // Disable the form fields.
+    $form['#disabled'] = TRUE;
+  }
+
+  if (
+    $form_id == 'goal_donation_add_form'
+    || $form_id == 'goal_donation_edit_form'
+    || $form_id == 'goal_donation_delete_form'
+  ) {
+    $form['actions']['submit']['#submit'][] = 'sg_goal_donation_redirect_submit';
+  }
+
+  if (
+    $form_id == 'goal_volunteers_add_form'
+    || $form_id == 'goal_volunteers_edit_form'
+    || $form_id == 'goal_volunteers_delete_form'
+  ) {
+    $form['actions']['submit']['#submit'][] = 'sg_goal_volunteers_redirect_submit';
+  }
+}
+
+
+
+/**
+ * Custom submission handler for the goal donation entity forms.
+ */
+function sg_goal_donation_redirect_submit(array &$form, FormStateInterface $form_state) {
+  $related_orgs = $form_state->getValue('related_organizations');
+  if (!empty($related_orgs) && isset($related_orgs[0]['target_id'])) {
+    $node_id = $related_orgs[0]['target_id'];
+    $path = 'node/' . $node_id . '/donation-goals';
+    $form_state->setRedirectUrl(Url::fromUserInput('/' . $path));
+  }
+}
+
+/**
+ * Custom submission handler for the goal volunteers entity forms.
+ */
+function sg_goal_volunteers_redirect_submit(array &$form, FormStateInterface $form_state) {
+  $related_orgs = $form_state->getValue('related_organizations');
+  if (!empty($related_orgs) && isset($related_orgs[0]['target_id'])) {
+    $node_id = $related_orgs[0]['target_id'];
+    $path = 'node/' . $node_id . '/volunteer-goals';
+    $form_state->setRedirectUrl(Url::fromUserInput('/' . $path));
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for views_view_unformatted templates.
+ */
+function sg_goal_preprocess_goal(&$variables) {
+  $goal_entity = $variables['elements']['#goal'];
+  $node_type = $goal_entity->get('related_organizations')->entity->bundle();
+
+  if ($goal_entity->bundle() == 'donation') {
+
+    // Query to get the total donations between goal dates.
+    $query = Database::getConnection()->select(
+      'commerce_order_item',
+      NULL
+    );
+    $query->fields('commerce_order_item', ['order_item_id']);
+    $query->addExpression(
+      'SUM(commerce_order_item.total_price__number)',
+      'goal_progress'
+    );
+    $query->addExpression(
+      'COUNT(DISTINCT commerce_order.order_id)',
+      'goal_supporters'
+    );
+
+    // If node type is nonprofit join these tables.
+    if ($node_type == 'nonprofit') {
+      $query->leftJoin(
+        'commerce_order_item__field_nonprofit',
+        NULL,
+        'commerce_order_item.order_item_id = commerce_order_item__field_nonprofit.entity_id
+      AND commerce_order_item__field_nonprofit.deleted = 0'
+      );
+      $query->innerJoin(
+        'node_field_data',
+        NULL,
+        'commerce_order_item__field_nonprofit.field_nonprofit_target_id = node_field_data.nid'
+      );
+    }
+
+    // If node type is group_hub join these tables.
+    if ($node_type == 'group_hub') {
+      $query->leftJoin(
+        'commerce_order_item__field_associated_org',
+        NULL,
+        'commerce_order_item.order_item_id = commerce_order_item__field_associated_org.entity_id
+      AND commerce_order_item__field_associated_org.deleted = 0'
+      );
+      $query->innerJoin(
+        'node_field_data',
+        NULL,
+        'commerce_order_item__field_associated_org.field_associated_org_target_id = node_field_data.nid'
+      );
+    }
+
+    $query->leftJoin(
+      'commerce_order',
+      NULL,
+      'commerce_order_item.order_id = commerce_order.order_id'
+    );
+    $query->innerJoin(
+      'goal',
+      NULL,
+      'node_field_data.nid = goal.related_organizations'
+    );
+
+    $query->condition('goal.id', $goal_entity->id());
+    $query->condition(
+      'commerce_order_item.changed', [$goal_entity->get('date_range')->value, $goal_entity->get('date_range')->end_value],
+      'BETWEEN'
+    );
+
+    $results = $query->execute()->fetchAll();
+
+    $variables['goal_progress'] = $goal_entity->get('field_offline_donations')->value + $results[0]->goal_progress;
+    $variables['goal_supporters'] = $results[0]->goal_supporters;
+  }
+
+  if ($goal_entity->bundle() == 'volunteers') {
+
+    // Query to get the total volunteer applications between goal dates.
+    $query = \Drupal::database()->select(
+      'webform_submission',
+      NULL
+    );
+    $query->addExpression(
+      'COUNT(webform_submission.sid)',
+      'goal_volunteers_applications'
+    );
+    $query->addExpression(
+      'COUNT(DISTINCT email_address_data.value)',
+      'goal_volunteers'
+    );
+    $query->leftJoin(
+      'webform_submission_data',
+      NULL,
+      "webform_submission.sid = webform_submission_data.sid
+      AND webform_submission_data.name =  :node_type
+      AND webform_submission_data.delta = '0'
+      AND webform_submission_data.property = ''",
+    [':node_type' => $node_type]);
+    $query->innerJoin(
+      'node_field_data',
+      NULL,
+      'webform_submission_data.value = node_field_data.nid'
+    );
+    $query->leftJoin(
+      'webform_submission_data',
+      'email_address_data',
+      "webform_submission.sid = email_address_data.sid
+      AND email_address_data.name = 'email_address'
+      AND email_address_data.delta = '0'
+      AND email_address_data.property = ''"
+    );
+
+    $related_organization = $goal_entity->get('related_organizations')->entity;
+    $node_id = $related_organization->id();
+
+    $query->condition('node_field_data.nid', $node_id);
+    $query->condition('webform_submission.webform_id', 'volunteer_application');
+    $query->condition('webform_submission.completed', [
+      $goal_entity->get('date_range')->value,
+      $goal_entity->get('date_range')->end_value
+    ], 'BETWEEN');
+
+    $results = $query->execute()->fetchAll();
+
+    $variables['goal_volunteers_applications'] = $goal_entity->get('field_offline_volunteer_requests')->value + $results[0]->goal_volunteers_applications;
+    $variables['goal_volunteers'] = $results[0]->goal_volunteers;
+  }
+}
+
+/**
+ * Implements hook_preprocess_views_view_field();
+ *
+ * Provides logic on goals search fields to filter out the goal thermometers
+ * based on the filters from the exposed filter form as the way Search API
+ * stores and displays those goals is simply a comma separated string of all
+ * the goal ids related to an organization.
+ */
+function sg_goal_preprocess_views_view_field(&$variables) {
+  /** @var Drupal\views\ViewExecutable $view */
+  $view = $variables['view'];
+  if (
+    (($view->id() == 'search_nonprofits' && $view->current_display == 'nonprofit_goals_search_page') ||
+    ($view->id() == 'search_group_hubs' && $view->current_display == 'group_hub_goals_search_page') )
+     && $variables['field']->options['id'] == 'goal_id') {
+    $goal_type_filter = \Drupal::request()->query->get('goal_type');
+    if (!empty($variables['output'])) {
+      $ids = explode(",", $variables['output']->__toString());
+      $ids = array_map('trim', $ids);
+      $query = \Drupal::database()->select('goal', 'g')
+        ->fields('g', ['id'])
+        ->condition('g.id', $ids, 'IN')
+        ->condition('g.status', '1')
+        ->orderBy('g.bundle');
+      if (!empty($goal_type_filter) && $goal_type_filter !== 'All') {
+        $query->condition('g.bundle', $goal_type_filter);
+      }
+      $ids = $query->execute()
+        ->fetchCol();
+      $variables['output'] = implode(',', $ids);
+    }
+  }
+}
+
+/**
+ * Implements hook_views_data().
+ */
+function sg_goal_views_data() {
+  $data['sg_goal']['table']['group'] = t('Global');
+  $data['sg_goal']['table']['join'] = [
+    // Exist in all views.
+    '#global' => [],
+  ];
+  $data['sg_goal']['progress_toward_goal'] = [
+    'title' => t('Progress toward Goal'),
+    'help' => t("Display a sum of all donations or volunteers that apply toward a given goal."),
+    'group' => t('Content'),
+    'field' => [
+      'id' => 'progress_toward_goal',
+    ],
+  ];
+  $data['sg_goal']['goal_met'] = [
+    'title' => t('Goal Met? Y/N'),
+    'help' => t("Display Y if the given goal has been met, or N if not."),
+    'group' => t('Content'),
+    'field' => [
+      'id' => 'goal_met',
+    ],
+  ];
+  return $data;
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function sg_goal_views_data_alter(&$data) {
+  $data['node_field_data']['goal'] = [
+    'title' => t('Related Goals'),
+    'help' => '',
+    'relationship' => [
+      'title' => t("Organization's Related Goals"),
+      'help' => t('Provides a relationship from Nonprofits and Group hubs to goals that reference them.'),
+      'field' => 'nid',
+      'base' => 'goal',
+      'base field' => 'related_organizations',
+      'id' => 'standard',
+      'label' => t("Organization's Related Goals"),
+    ]
+  ];
+}
+
+function sg_goal_theme_suggestions_goal(array $variables) {
+  $suggestions = [];
+  $goal = $variables['elements']['#goal'];
+  $sanitized_view_mode = strtr($variables['elements']['#view_mode'], '.', '_');
+  $suggestions[] = 'goal__' . $sanitized_view_mode;
+  $suggestions[] = 'goal__' . $goal->bundle();
+  $suggestions[] = 'goal__' . $goal->bundle() . '__' . $sanitized_view_mode;
+  $suggestions[] = 'goal__' . $goal->id();
+  $suggestions[] = 'goal__' . $goal->id() . '__' . $sanitized_view_mode;
+  return $suggestions;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function sg_goal_theme() {
+  return [
+    'goal' => [
+      'render element' => 'elements',
+    ],
+  ];
+}
+
+/**
+ * Theme function for the goal entity.
+ *
+ * @param array $variables
+ */
+function template_preprocess_goal(array &$variables) {
+  $variables['view_mode'] = $variables['elements']['#view_mode'];
+  foreach (Element::children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Alters sg_setup_activity form to include the goals search page functionality.
+ */
+function sg_goal_form_sg_setup_activity_alter(&$form, &$form_state, $form_id) {
+  $formObj = $form_state->getformObject();
+  $config = $formObj->getConfig();
+  $formObj->buildPromoFieldSet($form, $config, "nonprofit_goal");
+  $formObj->buildPromoFieldSet($form, $config, "group_hub_goal");
+  $form['#validate'][] = 'sg_goal_form_sg_setup_activity_validate';
+}
+
+/**
+ * Validate the goal specific parts of sg_setup_activity form.
+ *
+ * @param array $form
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *
+ * @return void
+ * @see sg_goal_form_sg_setup_activity_alter
+ */
+function sg_goal_form_sg_setup_activity_validate($form, FormStateInterface $form_state) {
+    foreach (['nonprofit_goal', 'group_hub_goal'] as $page) {
+      $text = $form_state->getValue($page . '_promo');
+      if (strlen($text) > 300) {
+        $form_state->setErrorByName($page . '_promo', t('Maximum length: 300 characters.'));
+      }
+      if (preg_match_all('/\n/', $text) > 3) {
+        $form_state->setErrorByName($page . '_promo', t('Maximum line breaks: 3.'));
+      }
+    }
+
+}
+
+/**
+ * Implements hook_entity_insert();
+ */
+function sg_goal_entity_insert(EntityInterface $entity) {
+  sg_goal_entity_change($entity);
+}
+
+/**
+ * Implements hook_entity_update();
+ */
+function sg_goal_entity_update(EntityInterface $entity) {
+  sg_goal_entity_change($entity);
+}
+
+/**
+ * Implements hook_entity_update();
+ */
+function sg_goal_entity_delete(EntityInterface $entity) {
+  sg_goal_entity_change($entity);
+}
+
+/**
+ * Reindexes and invalidates cache for an organization when a goal is saved.
+ *
+ * For some reason, Search Api will not reindex the node on it's own even though
+ * the goal entity has a reverse entity reference stored on it's index. This is
+ * a work around to force the record to rebuild so we get the up to date goals
+ * ids list in solr.
+ * Also, since we query for data, and also have a reverse entity relationship
+ * going, we have to invalidate the cache for the nodes that display the goals
+ * on them whenever anything changes about the data that produces the
+ * thermometer for the goal.
+ *
+ * @param EntityInterface $entity
+ */
+function sg_goal_entity_change(EntityInterface $entity) {
+  /** @var Drupal\Core\Cache\CacheTagsInvalidator */
+  $cache_tags_invalidator_service = \Drupal::service('cache_tags.invalidator');
+  /** @var Drupal\Core\Entity\EntityTypeManager */
+  $entity_type_manager_service = \Drupal::service('entity_type.manager');
+
+  // Donations are sometimes associated with goals on a node. Lets invalidate
+  // their cache when a commerce_order_item changes.
+  if ($entity->getEntityTypeId() == 'commerce_order_item') {
+    /** @var Drupal\commerce_order\Entity\OrderItemInterface $entity */
+    if ($entity->hasField('field_nonprofit') && !$entity->get('field_nonprofit')->isEmpty()) {
+      /** @var Drupal\node\Entity\Node|null $nonprofit */
+      $nonprofit = $entity->field_nonprofit->entity;
+      if (!is_null($nonprofit)) {
+        // Get all the goals this donation would affect.
+        $query = \Drupal::entityQuery('goal');
+        $result = $query
+          ->accessCheck(FALSE)
+          ->condition('related_organizations', $nonprofit->id())
+          ->condition('bundle', 'donation')
+          ->condition('status', TRUE)
+          ->condition('date_range.value', $entity->changed->value, '<=')
+          ->condition('date_range.end_value', $entity->changed->value, '>=')
+          ->execute();
+        $goals = $entity_type_manager_service->getStorage('goal')->loadMultiple($result);
+        if (!empty($goals)) {
+          foreach ($goals as $goal) {
+            sg_goal_entity_change($goal);
+          }
+        }
+      }
+    }
+  }
+  // Volunteer submissions are sometimes associated with goals on a node. Lets
+  // invalidate their cache when a webform submission changes.
+  if ($entity->getEntityTypeId() == 'webform_submission'){
+    /** @var \Drupal\webform\WebformSubmissionInterface $entity */
+    if ($entity->isCompleted()) {
+      // Gather the organizations that this submission affects as they may
+      // have goals related to them.
+      $nonprofit_id = $entity->getElementData('nonprofit');
+      $grouphub_id = $entity->getElementData('group_hub');
+      $organizations = [];
+      if (!empty($nonprofit_id)) {
+        $organizations[] = $nonprofit_id;
+      }
+      if (!empty($grouphub_id)) {
+        $organizations[] = $grouphub_id;
+      }
+      if (!empty($organizations)) {
+        // Get all the goals this submission would affect.
+        $query = \Drupal::entityQuery('goal');
+        $result = $query
+          ->accessCheck(FALSE)
+          ->condition('related_organizations', $organizations, 'IN')
+          ->condition('bundle', 'volunteers')
+          ->condition('status', TRUE)
+          ->condition('date_range.value', $entity->getCompletedTime(), '<=')
+          ->condition('date_range.end_value', $entity->getCompletedTime(), '>=')
+          ->execute();
+        $goals = $entity_type_manager_service->getStorage('goal')->loadMultiple($result);
+        if (!empty($goals)) {
+          foreach ($goals as $goal) {
+            sg_goal_entity_change($goal);
+          }
+        }
+      }
+    }
+  }
+  if ($entity->getEntityTypeId() == 'goal') {
+    /** @var Drupal\sg_goal\Entity\Goal $entity */
+    /** @var Drupal\node\Entity\Node|null $node */
+    $node = $entity->related_organizations->entity;
+    if (!is_null($node) && $node instanceof Node) {
+      // Invalidate the organization node page so that the thermometer gets
+      // updated when a goal is changed.
+      $cache_tags_invalidator_service->invalidateTags(['node:' . $node->id(), 'config:views.view.goal_thermometers', 'goal_view']);
+      if ($node->bundle() == 'nonprofit') {
+        // Invalidate the nonprofits search cache when a goal is updated so that
+        // the thermometers get updated.
+        $cache_tags_invalidator_service->invalidateTags(['config:views.view.search_nonprofits']);
+        // Reindex nonprofits so the statuses and related ids get updated.
+        $index = Index::load('nonprofits');
+      }
+      if ($node->bundle() == 'group_hub') {
+        // Invalidate the group_hub search cache when a goal is updated so that
+        // the thermometers get updated.
+        $cache_tags_invalidator_service->invalidateTags(['config:views.view.search_group_hubs']);
+        // Reindex group_hubs so the statuses and related ids get updated.
+        $index = Index::load('group_hubs');
+      }
+      if (!empty($index)) {
+        $index->trackItemsUpdated('entity:node', [$node->id() . ':en']);
+        $index->indexItems();
+      }
+    }
+  }
+}

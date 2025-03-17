@@ -1,0 +1,11 @@
+entity.goal_type.collection:
+  title: 'Goal types'
+  description: 'Manage and CRUD actions on Goal type.'
+  parent: system.admin_structure
+  route_name: entity.goal_type.collection
+
+entity.goal.collection:
+  title: 'Goals'
+  description: 'List of goals.'
+  route_name: entity.goal.collection
+  parent: system.admin_content

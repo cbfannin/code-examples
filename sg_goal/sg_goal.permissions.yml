@@ -1,0 +1,20 @@
+administer goal types:
+  title: 'Administer goal types'
+  description: 'Maintain the types of goal entity.'
+  restrict access: true
+
+view goal:
+  title: 'View goals'
+  description: 'Allow users to access goal entities.'
+
+create goal:
+  title: 'Create goals'
+  description: 'Allow users to create new goal entities.'
+
+edit goal:
+  title: 'Edit goals'
+  description: 'Allow users to edit goal entities.'
+
+delete goal:
+  title: 'Delete goals'
+  description: 'Allow users to delete goal entities.'

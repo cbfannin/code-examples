@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * @file
+ * Module to help manage actions for event subscribers.
+ */
+
+use Drupal\node\Entity\Node;
+use Drupal\user\Entity\User;
+
+/**
+ * Implements hook_mail().
+ */
+function ys_custom_events_mail($key, &$message, $params) {
+  switch ($key) {
+    case 'publish':
+      $message['from'] = \Drupal::config('system.site')->get('mail');
+      $message['subject'] = t('Scheduled content published.');
+      $message['body'][] = $params['message'];
+      break;
+
+    case 'unpublish':
+      $message['from'] = \Drupal::config('system.site')->get('mail');
+      $message['subject'] = t('Scheduled content unpublished.');
+      $message['body'][] = $params['message'];
+      break;
+  }
+}
+
+/**
+ * Called from event subscriber.
+ */
+function ys_custom_events_mail_template($nid, $key) {
+  $entity = Node::load($nid);
+  $uid = $entity->getOwnerId();
+  $account = User::load($uid);
+
+  $mailManager = \Drupal::service('plugin.manager.mail');
+  $module = 'ys_custom_events';
+  $to = $account->getEmail();
+  $params['node_title'] = $entity->label();
+  $params['message'] = 'Your scheduled content "' . $params['node_title'] . '" has been ' . $key . "ed.";
+  $langcode = \Drupal::currentUser()->getPreferredLangcode();
+  $send = TRUE;
+
+  $mailManager->mail($module, $key, $to, $langcode, $params, NULL, $send);
+}

@@ -1,0 +1,14 @@
+block.settings.sg_goal_search_nonprofit_goal_pillar:
+  type: block_settings
+  label: 'Search Nonprofit Goal Pillar block'
+  mapping:
+    body:
+      type: string
+      label: Body
+block.settings.sg_goal_search_group_hub_goal_pillar:
+  type: block_settings
+  label: 'Search Group Hub Goal Pillar block'
+  mapping:
+    body:
+      type: string
+      label: Body
